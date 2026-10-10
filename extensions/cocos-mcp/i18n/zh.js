@@ -1,0 +1,1 @@
+"use strict";module.exports={open_panel:"MCP 服务器控制面板",open_ai_config:"AI 图像配置",description:"使用 Streamable HTTP 协议的 MCP 服务器来控制 Cocos Creator"};

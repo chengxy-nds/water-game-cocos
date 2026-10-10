@@ -1,0 +1,243 @@
+<div class="mcp-server-control">
+  <div class="header-section">
+    <h2>MCP Server Control</h2>
+    <div class="status-indicator" :class="{ 'running': serverInfo.isRunning, 'stopped': !serverInfo.isRunning }">
+      {{ serverInfo.isRunning ? 'RUNNING' : 'STOPPED' }}
+    </div>
+  </div>
+
+  <div class="server-config">
+    <div class="config-grid">
+      <div class="config-item">
+        <label for="port">Port:</label>
+        <ui-num-input 
+          id="port"
+          v-model="config.port" 
+          :disabled="serverInfo.isRunning"
+          :min="1000" 
+          :max="65535"
+          placeholder="3000">
+        </ui-num-input>
+      </div>
+      
+      <div class="config-item">
+        <label for="name">Name:</label>
+        <ui-input 
+          id="name"
+          v-model="config.name" 
+          :disabled="serverInfo.isRunning"
+          placeholder="cocos-mcp-server">
+        </ui-input>
+      </div>
+      
+      <div class="config-item">
+        <label for="version">Version:</label>
+        <span class="version-display">{{ VERSION }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="server-controls">
+    <ui-button 
+      class="start-button" 
+      :class="{ green: !serverInfo.isRunning }"
+      :disabled="serverInfo.isRunning || isLoading"
+      @click="startServer">
+      {{ isLoading && !serverInfo.isRunning ? 'Starting...' : 'Start Server' }}
+    </ui-button>
+    
+    <ui-button 
+      class="stop-button"
+      :class="{ red: serverInfo.isRunning }"
+      :disabled="!serverInfo.isRunning || isLoading"
+      @click="stopServer">
+      {{ isLoading && serverInfo.isRunning ? 'Stopping...' : 'Stop Server' }}
+    </ui-button>
+  </div>
+
+  <div class="tools-config">
+    <h3>Available Tools</h3>
+    <div class="tools-grid">
+      <!-- Core Tools -->
+      <div class="tool-category">
+        <h4>Core Tools</h4>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.createNodes" 
+            @change="onToolChange('createNodes', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Create Nodes</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.modifyNodes" 
+            @change="onToolChange('modifyNodes', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Modify Nodes</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.queryNodes" 
+            @change="onToolChange('queryNodes', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Query Nodes</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.queryComponents" 
+            @change="onToolChange('queryComponents', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Query Components</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.modifyComponents" 
+            @change="onToolChange('modifyComponents', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Modify Components</label>
+        </div>
+      </div>
+
+      <!-- Scene & Asset Tools -->
+      <div class="tool-category">
+        <h4>Scene & Assets</h4>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.operateCurrentScene" 
+            @change="onToolChange('operateCurrentScene', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Scene Operations</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.operatePrefabAssets" 
+            @change="onToolChange('operatePrefabAssets', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Prefab Operations</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.operateAssets" 
+            @change="onToolChange('operateAssets', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Asset Operations</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.nodeLinkedPrefabsOperations" 
+            @change="onToolChange('nodeLinkedPrefabsOperations', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Linked Prefab Operations</label>
+        </div>
+      </div>
+
+      <!-- Discovery Tools -->
+      <div class="tool-category">
+        <h4>Discovery</h4>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.getAvailableComponentTypes" 
+            @change="onToolChange('getAvailableComponentTypes', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Get Component Types</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.getAvailableAssetTypes" 
+            @change="onToolChange('getAvailableAssetTypes', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Get Asset Types</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.getAssetsByType" 
+            @change="onToolChange('getAssetsByType', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Get Assets by Type</label>
+        </div>
+      </div>
+
+      <!-- Generation & Project Tools -->
+      <div class="tool-category">
+        <h4>Generation & Project</h4>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.generateImageAsset" 
+            @change="onToolChange('generateImageAsset', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Generate Image Assets</label>
+        </div>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.operateProjectSettings" 
+            @change="onToolChange('operateProjectSettings', $event)"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Project Settings</label>
+        </div>
+      </div>
+
+      <!-- File System Tools (Security Sensitive) -->
+      <div class="tool-category security-warning">
+        <h4>⚠️ File System Tools</h4>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.operateScriptsAndText"
+            @change="onOperateScriptsAndTextChange"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Advanced File Operations</label>
+          <div class="security-note">
+            <small>⚠️ Allows AI to read, write, and modify project files directly</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Execution Tools (Security Sensitive) -->
+      <div class="tool-category security-warning">
+        <h4>⚠️ Code Execution Tools</h4>
+        <div class="tool-item">
+          <ui-checkbox 
+            :value="config.tools.executeSceneCode"
+            @change="onExecuteSceneCodeChange"
+            :disabled="serverInfo.isRunning">
+          </ui-checkbox>
+          <label>Execute Scene Code</label>
+          <div class="security-note">
+            <small>⚠️ Allows AI to execute arbitrary code in the scene context</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="server-info" v-if="serverInfo.isRunning">
+    <h3>Server Information</h3>
+    <div class="info-row">
+      <strong>URL:</strong> http://localhost:{{ config.port }}
+    </div>
+    <div class="info-row">
+      <strong>Name:</strong> {{ config.name }}
+    </div>
+    <div class="info-row">
+      <strong>Version:</strong> {{ VERSION }}
+    </div>
+    <div class="info-row">
+      <strong>Active Tools:</strong> {{ getActiveToolsCount() }} / {{ getTotalToolsCount() }}
+    </div>
+  </div>
+
+</div>

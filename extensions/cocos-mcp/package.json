@@ -1,0 +1,152 @@
+{
+    "$schema": "./@types/schema/package/index.json",
+    "package_version": 2,
+    "name": "cocos-mcp",
+    "version": "1.0.1",
+    "author": "Roma Rogov",
+    "editor": ">=3.8.6",
+    "scripts": {
+        "preinstall": "node ./scripts/preinstall.js",
+        "build": "npx tsc"
+    },
+    "description": "i18n:cocos-mcp.description",
+    "main": "./dist/main.js",
+    "dependencies": {
+        "@huggingface/inference": "^4.6.1",
+        "@modelcontextprotocol/sdk": "^1.0.0",
+        "express": "^4.18.2",
+        "fs-extra": "^10.0.0",
+        "sharp": "^0.34.3",
+        "vue": "^3.1.4",
+        "zod": "^3.22.0"
+    },
+    "devDependencies": {
+        "@cocos/creator-types": "^3.8.6",
+        "@types/express": "^4.17.17",
+        "@types/fs-extra": "^9.0.5",
+        "@types/node": "^18.17.1",
+        "typescript": "^5.8.2"
+    },
+    "panels": {
+        "default": {
+            "title": "MCP Server Settings",
+            "type": "dockable",
+            "main": "dist/panels/default",
+            "size": {
+                "min-width": 400,
+                "min-height": 300,
+                "width": 1024,
+                "height": 600
+            }
+        },
+        "image-generator": {
+            "title": "Image Generator",
+            "type": "simple",
+            "main": "dist/panels/image-generator",
+            "size": {
+                "min-width": 300,
+                "min-height": 200,
+                "width": 400,
+                "height": 250
+            },
+            "flags": {
+                "save-layout": false
+            }
+        },
+        "ai-config": {
+            "title": "AI Image Configuration",
+            "type": "dockable",
+            "main": "dist/panels/ai-config",
+            "size": {
+                "min-width": 600,
+                "min-height": 400,
+                "width": 1200,
+                "height": 800
+            }
+        }
+    },
+    "contributions": {
+        "scene": {
+            "script": "./dist/scene/index.js"
+        },
+        "menu": [
+            {
+                "path": "i18n:menu.panel/cocos-mcp",
+                "label": "i18n:cocos-mcp.open_panel",
+                "message": "open-panel"
+            },
+            {
+                "path": "i18n:menu.panel/cocos-mcp",
+                "label": "i18n:cocos-mcp.open_ai_config",
+                "message": "open-ai-config"
+            }
+        ],
+        "messages": {
+            "open-panel": {
+                "methods": [
+                    "openPanel"
+                ]
+            },
+            "open-image-generator": {
+                "methods": [
+                    "openImageGeneratorPanel"
+                ]
+            },
+            "open-ai-config": {
+                "methods": [
+                    "openAiConfigPanel"
+                ]
+            },
+            "generate-image-from-svg": {
+                "methods": [
+                    "image-generator.processImageGeneration"
+                ]
+            },
+            "start-mcp-server": {
+                "methods": [
+                    "startMcpServer"
+                ]
+            },
+            "stop-mcp-server": {
+                "methods": [
+                    "stopMcpServer"
+                ]
+            },
+            "get-mcp-server-info": {
+                "methods": [
+                    "getMcpServerInfo"
+                ]
+            },
+            "update-mcp-server-config": {
+                "methods": [
+                    "updateMcpServerConfig"
+                ]
+            },
+            "get-image-config": {
+                "methods": [
+                    "getImageConfig"
+                ]
+            },
+            "save-image-config": {
+                "methods": [
+                    "saveImageConfig"
+                ]
+            },
+            "test-provider": {
+                "methods": [
+                    "testProvider"
+                ]
+            },
+            "fetch-provider-models": {
+                "methods": [
+                    "fetchProviderModels"
+                ]
+            },
+            "reset-image-config": {
+                "methods": [
+                    "resetImageConfig"
+                ]
+            }
+        }
+    }
+}
