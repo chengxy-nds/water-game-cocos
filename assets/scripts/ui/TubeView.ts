@@ -46,6 +46,7 @@ export class TubeView extends Component {
 
     public init(index: number, bottle: Bottle) {
         this.autoBindNodes();
+        this._initialPos.set(this.node.position);
         this._index = index;
         this._bottleData = bottle;
         this.renderLayers();

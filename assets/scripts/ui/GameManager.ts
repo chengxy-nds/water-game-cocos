@@ -1,4 +1,4 @@
-import { _decorator, Component, Node } from 'cc';
+import { _decorator, Component, Node, director, Director, UITransform } from 'cc';
 import { Bottle, Move } from '../core/types';
 import { canPour, applyMove, isLevelWon, isDeadlocked, TUBE_CAPACITY } from '../core/waterSortSolver';
 import { GameBoard } from './GameBoard';
@@ -38,6 +38,7 @@ export class GameManager extends Component {
     }
 
     start() {
+        console.log('[GameManager] Starting game loop...');
         this.autoBindDependencies();
         this.setupButtons();
         this.loadLevelData(DEFAULT_LEVEL_BOTTLES);
@@ -64,14 +65,24 @@ export class GameManager extends Component {
 
         const undoBtn = footer.getChildByName('BtnUndo');
         if (undoBtn) {
+            const trans = undoBtn.getComponent(UITransform);
+            if (trans) trans.setContentSize(120, 60);
             undoBtn.off(Node.EventType.TOUCH_END);
-            undoBtn.on(Node.EventType.TOUCH_END, () => this.handleUndo());
+            undoBtn.on(Node.EventType.TOUCH_END, () => {
+                console.log('[GameManager] Undo clicked!');
+                this.handleUndo();
+            });
         }
 
         const shuffleBtn = footer.getChildByName('BtnShuffle');
         if (shuffleBtn) {
+            const trans = shuffleBtn.getComponent(UITransform);
+            if (trans) trans.setContentSize(120, 60);
             shuffleBtn.off(Node.EventType.TOUCH_END);
-            shuffleBtn.on(Node.EventType.TOUCH_END, () => this.handleAddExtraTube());
+            shuffleBtn.on(Node.EventType.TOUCH_END, () => {
+                console.log('[GameManager] Add extra tube clicked!');
+                this.handleAddExtraTube();
+            });
         }
     }
 
@@ -217,3 +228,24 @@ export class GameManager extends Component {
         }
     }
 }
+
+// 自动自启动引导器：在场景渲染启动后自动挂载 GameManager 启动交互
+function bootstrapGame() {
+    const scene = director.getScene();
+    if (!scene) return;
+    const canvas = scene.getChildByName('Canvas');
+    if (canvas && !canvas.getComponent(GameManager)) {
+        console.log('[AutoBootstrap] Adding GameManager to Canvas...');
+        canvas.addComponent(GameManager);
+    }
+}
+
+director.on(Director.EVENT_AFTER_SCENE_LAUNCH, bootstrapGame);
+
+// 延时兜底检测（防止事件错过）
+setTimeout(() => {
+    bootstrapGame();
+}, 200);
+setTimeout(() => {
+    bootstrapGame();
+}, 800);

@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Prefab, instantiate, Vec3 } from 'cc';
+import { _decorator, Component, Node, Prefab, instantiate, Vec3, UITransform } from 'cc';
 import { Bottle } from '../core/types';
 import { TubeView } from './TubeView';
 
@@ -15,11 +15,6 @@ export class GameBoard extends Component {
     public init(bottles: Bottle[], onTubeClicked: (index: number) => void) {
         this._onTubeClickedCallback = onTubeClicked;
 
-        if (this.tubePrefab && this.node.children.length === 0) {
-            this.buildFromPrefab(bottles);
-            return;
-        }
-
         this._tubes = [];
         const tubeNodes = this.node.children.filter(c => c.name.startsWith('Tube_'));
         
@@ -30,6 +25,9 @@ export class GameBoard extends Component {
         });
 
         tubeNodes.forEach((node, idx) => {
+            const trans = node.getComponent(UITransform) || node.addComponent(UITransform);
+            trans.setContentSize(70, 160);
+
             let view = node.getComponent(TubeView);
             if (!view) {
                 view = node.addComponent(TubeView);
@@ -41,58 +39,11 @@ export class GameBoard extends Component {
 
             node.off(Node.EventType.TOUCH_END);
             node.on(Node.EventType.TOUCH_END, () => {
+                console.log(`[GameBoard] Tube_${idx} clicked!`);
                 if (this._onTubeClickedCallback) {
                     this._onTubeClickedCallback(idx);
                 }
             });
-        });
-    }
-
-    private buildFromPrefab(bottles: Bottle[]) {
-        this.node.removeAllChildren();
-        this._tubes = [];
-        const total = bottles.length;
-        const rowCount = total > 7 ? 2 : 1;
-        const topCount = rowCount === 2 ? 5 : total;
-        const bottomCount = total - topCount;
-
-        const spacingX = 115;
-        const rowSpacingY = 240;
-
-        const topStartX = -((topCount - 1) * spacingX) / 2;
-        const topY = rowCount === 2 ? rowSpacingY / 2 : 0;
-
-        for (let i = 0; i < topCount; i++) {
-            const posX = topStartX + i * spacingX;
-            this.createTubeInstance(i, bottles[i], new Vec3(posX, topY, 0));
-        }
-
-        if (bottomCount > 0) {
-            const bottomStartX = -((bottomCount - 1) * spacingX) / 2;
-            const bottomY = -rowSpacingY / 2;
-
-            for (let j = 0; j < bottomCount; j++) {
-                const globalIdx = topCount + j;
-                const posX = bottomStartX + j * spacingX;
-                this.createTubeInstance(globalIdx, bottles[globalIdx], new Vec3(posX, bottomY, 0));
-            }
-        }
-    }
-
-    private createTubeInstance(index: number, bottle: Bottle, pos: Vec3) {
-        if (!this.tubePrefab) return;
-        const tubeNode = instantiate(this.tubePrefab);
-        tubeNode.setParent(this.node);
-        tubeNode.setPosition(pos);
-
-        const tubeView = tubeNode.getComponent(TubeView) || tubeNode.addComponent(TubeView);
-        tubeView.init(index, bottle);
-        this._tubes.push(tubeView);
-
-        tubeNode.on(Node.EventType.TOUCH_END, () => {
-            if (this._onTubeClickedCallback) {
-                this._onTubeClickedCallback(index);
-            }
         });
     }
 
