@@ -1,73 +1,96 @@
+export type ColorKey =
+  | 'red'
+  | 'yellow'
+  | 'blue'
+  | 'green'
+  | 'purple'
+  | 'orange'
+  | 'cyan'
+  | 'pink'
+  | 'mystery_dark';
+
 export interface ColorDef {
-  id: string;
   name: string;
   hex: string;
-  topHex?: string; // lighter shade for 3D top meniscus disk
-  shadeHex?: string; // darker shade for cylindrical 3D edge shading
-  gradient: string;
-  shadow: string;
-  symbol: string; // for colorblind mode
-  textColor: string;
+  left: string;
+  mid: string;
+  highlight: string;
+  right: string;
+  topMid: string;
+  topRim: string;
+  topLight: string;
+  bagMain: string;
+  bagDark: string;
 }
 
-export type BottleType = 'normal' | 'empty' | 'masked' | 'hidden' | 'bottom_leak';
+export type BottleSpecial =
+  | 'none'
+  | 'silk_drape'
+  | 'ice_base'
+  | 'full_ice'
+  | 'stone_base'
+  | 'paper_bag'
+  | 'ad_cam'
+  | 'ad_cam_blue';
 
-/**
- * A bottle in the puzzle. `layers` is the single source of truth for liquid,
- * always stored bottom → top (index 0 = bottom-most layer).
- */
 export interface Bottle {
-  id: string; // unique within a level, e.g. 'b1'
-  type: BottleType;
-  capacity: number; // default 4
-  layers: string[]; // color ids, bottom → top
-  // masked (遮罩瓶)
-  maskRevealed?: boolean;
-  unlockTargetCompletedBottles?: number;
-  countsTowardObjective?: boolean;
-  // hidden (隐藏瓶): number of bottom contiguous hidden layers (max 3),
-  // hidden beneath the known top color; each top-layer pour reveals one.
-  hiddenBottomLayers?: number;
-  // bottom_leak (底部漏水瓶): fixed target bottle below
-  leakTargetBottleId?: string;
+  id: number;
+  maxCap: number; // 2, 4, 6, 8
+  layers: ColorKey[];
+  special: BottleSpecial;
+  mysteryCount?: number;
+  isGiantCat?: boolean;
+  catTargetColor?: ColorKey;
+  unlockOrder?: number;
+  poursToBreak?: number;
+  removed?: boolean;
+  corked?: boolean;
+  corkAnimProgress?: number;
+}
+
+export interface Bag {
+  slot?: number;
+  color: ColorKey | null;
+  needed?: number;
+  current?: number;
   locked?: boolean;
+  packedBottle?: ColorKey | null;
+  justPacked?: boolean;
 }
 
-// Legacy alias for liquid-only contexts; game state now uses Bottle[].
-export type Tube = string[];
-
-export interface Move {
-  kind: 'pour' | 'leak';
-  from: number; // bottle index
-  to: number; // bottle index (for leak, resolved from leakTargetBottleId)
-  colorId: string;
-  count: number; // pour = layer count; leak = 1
-}
-
-export type Difficulty = 'easy' | 'medium' | 'hard' | 'master';
-
-export interface Level {
-  id: number | string;
+export interface MechanicIntro {
+  key?: string;
+  badge: string;
   title: string;
-  difficulty: Difficulty;
-  bottles: Bottle[]; // initial configuration
-  optimalSteps?: number;
-  description?: string;
-  isCustom?: boolean;
+  sub?: string;
+  desc: string;
+  sampleBottle?: () => Bottle;
 }
 
-export interface SolverResult {
-  solvable: boolean;
-  optimalSteps: number;
-  moves: Move[];
-  visitedNodes: number;
-  timeMs: number;
-  reason?: string;
+export interface LevelConfig {
+  id?: number;
+  levelNum: number;
+  chapter: number;
+  pos: number;
+  waveStars: number;
+  title: string;
+  shortTag: string;
+  hasBags: boolean;
+  isVariedHeight: boolean;
+  isCatBossLevel: boolean;
+  gridClass: string;
+  moveLimit: number | null;
+  optimalMoves: number;
+  introMechanicKey: string | null;
+  bags: Bag[];
+  bottles: () => Bottle[];
 }
 
-export interface PlayerStats {
-  completedLevels: Record<string, { stars: number; bestSteps: number; completedAt: string }>;
-  dailyChallengeCompleted: Record<string, { stars: number; steps: number }>;
-  hintsUsedTotal: number;
-  totalPours: number;
+export interface MoveHistoryItem {
+  bottles: Bottle[];
+  bags: Bag[];
+  packedTotal: number;
+  pourCountTotal: number;
+  remainingMoves: number | null;
+  shuffleUses: number;
 }
