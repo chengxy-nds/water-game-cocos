@@ -50,6 +50,7 @@ const UI_ASSET_UUIDS = {
   iceBase: '268b5093-e2f8-4662-b302-7527c287ceeb@f9941',
   giantCat: '786c6a08-05f9-4264-9e95-e96129d01543@f9941',
   tubeGlass: '7b422a4d-76c3-45d9-bee7-ae2e085645ca@f9941',
+  fontFredoka: 'd4a89601-3882-4aa1-92be-b1e600a01001',
 };
 
 @ccclass('GameManager')
@@ -213,6 +214,11 @@ export class GameManager extends Component {
       this._bigNumLabel.lineHeight = 36;
       this._bigNumLabel.isBold = true;
       this._bigNumLabel.color = new Color(255, 255, 255, 255);
+      assetManager.loadAny(UI_ASSET_UUIDS.fontFredoka, (err, font: any) => {
+        if (!err && font && this._bigNumLabel?.isValid) {
+          this._bigNumLabel.font = font;
+        }
+      });
     } else {
       this._bigNumLabel = bigNumNode.getComponent(Label);
       if (this._bigNumLabel) {

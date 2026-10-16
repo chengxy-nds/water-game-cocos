@@ -10,6 +10,8 @@ const TUBE_HALF_WIDTH = 24.8; // 普通试管内壁半宽
 // 超清全套高奢资产 UUID
 const ASSET_UUIDS = {
   glass: '7b422a4d-76c3-45d9-bee7-ae2e085645ca@f9941',
+  glassBack: 'e8a0110-3882-4aa1-92be-b1e600a01011@f9941',
+  glassFront: 'e8a0110-3882-4aa1-92be-b1e600a01012@f9941',
   glassAd: '1b2187b3-caf3-4ab1-b849-f7ac654a0f23@f9941',
   giantCat: '786c6a08-05f9-4264-9e95-e96129d01543@f9941',
   videoBadge: '3b84bfe1-fd95-4fcc-97a1-18318d64f0c5@f9941',
@@ -36,6 +38,9 @@ export class TubeView extends Component {
 
   @property(Node)
   public videoBadgeNode: Node = null!;
+
+  // 3D 沉底厚玻璃后壁与内底台面节点 (位于流体下方)
+  private _backFloorNode: Node | null = null;
 
   // 动态流体 Graphics 绘制节点
   private _liquidGraphicsNode: Node | null = null;
@@ -96,7 +101,24 @@ export class TubeView extends Component {
   }
 
   private ensureSpecialNodes() {
-    // 1. 流体绘制节点 (置于玻璃瓶身下方)
+    // 0. 3D 沉底厚玻璃后壁与内底台面 (BackFloor) - 位于最底层
+    if (!this._backFloorNode) {
+      this._backFloorNode = this.node.getChildByName('BackFloor');
+      if (!this._backFloorNode) {
+        this._backFloorNode = new Node('BackFloor');
+        this._backFloorNode.layer = this.node.layer;
+        this._backFloorNode.setParent(this.node);
+      }
+      const trans = this._backFloorNode.getComponent(UITransform) || this._backFloorNode.addComponent(UITransform);
+      trans.setContentSize(78, 202);
+      this._backFloorNode.setPosition(0, 0, 0);
+      const sp = this._backFloorNode.getComponent(Sprite) || this._backFloorNode.addComponent(Sprite);
+      sp.sizeMode = Sprite.SizeMode.CUSTOM;
+      sp.type = Sprite.Type.SIMPLE;
+      this._backFloorNode.setSiblingIndex(0);
+    }
+
+    // 1. 流体绘制节点 (置于内底台面之上，玻璃前壁之下)
     if (!this._liquidGraphicsNode) {
       this._liquidGraphicsNode = this.node.getChildByName('LiquidGraphics');
       if (!this._liquidGraphicsNode) {
@@ -104,15 +126,22 @@ export class TubeView extends Component {
         this._liquidGraphicsNode.layer = this.node.layer;
         this._liquidGraphicsNode.setParent(this.node);
       }
-      if (this.bottleBody) {
-        this._liquidGraphicsNode.setSiblingIndex(Math.max(0, this.bottleBody.getSiblingIndex()));
-      }
       this._liquidGraphics =
         this._liquidGraphicsNode.getComponent(Graphics) ||
         this._liquidGraphicsNode.addComponent(Graphics);
     }
+    this._liquidGraphicsNode.setSiblingIndex(1);
 
-    // 1.5 机关礼袍覆面 (SpecialCover)
+    // 2. 玻璃前壁与沉底厚玻璃外壳 (GlassBody / FrontShell)
+    if (this.bottleBody) {
+      const trans = this.bottleBody.getComponent(UITransform) || this.bottleBody.addComponent(UITransform);
+      trans.setContentSize(78, 202);
+      this.bottleBody.setPosition(0, 0, 0);
+      this.bottleBody.getComponent(Sprite) || this.bottleBody.addComponent(Sprite);
+      this.bottleBody.setSiblingIndex(2);
+    }
+
+    // 2.5 机关礼袍覆面 (SpecialCover) - 覆盖于玻璃外壁之上
     if (!this._specialCoverNode) {
       this._specialCoverNode = this.node.getChildByName('SpecialCover');
       if (!this._specialCoverNode) {
@@ -126,17 +155,7 @@ export class TubeView extends Component {
       const sp = this._specialCoverNode.getComponent(Sprite) || this._specialCoverNode.addComponent(Sprite);
       sp.sizeMode = Sprite.SizeMode.CUSTOM;
       sp.type = Sprite.Type.SIMPLE;
-      if (this.bottleBody) {
-        this._specialCoverNode.setSiblingIndex(this.bottleBody.getSiblingIndex() + 1);
-      }
-    }
-
-    // 2. 玻璃外壁 (GlassBody)
-    if (this.bottleBody) {
-      const trans = this.bottleBody.getComponent(UITransform) || this.bottleBody.addComponent(UITransform);
-      trans.setContentSize(78, 202);
-      this.bottleBody.setPosition(0, 0, 0);
-      this.bottleBody.getComponent(Sprite) || this.bottleBody.addComponent(Sprite);
+      this._specialCoverNode.setSiblingIndex(3);
     }
 
     // 3. 备用瓶电影场记板 (VideoBadge)
@@ -326,13 +345,28 @@ export class TubeView extends Component {
    * 根据瓶型装配专属高奢玻璃皮 (灵猫水晶瓶 / 备用粉紫发光霓裳 / 经典水晶琉璃)
    */
   private updateGlassBodySkin() {
+    const isCat = !!this._bottleData?.isGiantCat;
+    const isAd = this._bottleData?.special === 'ad_cam' || this._bottleData?.special === 'ad_cam_blue';
+
+    // 1. 底层内壁椭圆台面 BackFloor (灵猫瓶自带封闭底，普通瓶启用三层立体夹心)
+    if (this._backFloorNode) {
+      this._backFloorNode.active = !isCat;
+      if (!isCat) {
+        const backSp = this._backFloorNode.getComponent(Sprite);
+        if (backSp) {
+          assetManager.loadAny(ASSET_UUIDS.glassBack, (err, sf: SpriteFrame) => {
+            if (!err && sf && backSp.isValid) backSp.spriteFrame = sf;
+          });
+        }
+      }
+    }
+
+    // 2. 顶层外壳 FrontShell (沉底厚玻璃高折射层、月牙焦散弧、瓶肩高光)
     if (!this.bottleBody) return;
     const sp = this.bottleBody.getComponent(Sprite);
     if (!sp) return;
 
-    const isCat = !!this._bottleData?.isGiantCat;
-    const isAd = this._bottleData?.special === 'ad_cam' || this._bottleData?.special === 'ad_cam_blue';
-    const targetUuid = isCat ? ASSET_UUIDS.giantCat : (isAd ? ASSET_UUIDS.glassAd : ASSET_UUIDS.glass);
+    const targetUuid = isCat ? ASSET_UUIDS.giantCat : (isAd ? ASSET_UUIDS.glassAd : ASSET_UUIDS.glassFront);
 
     assetManager.loadAny(targetUuid, (err, sf: SpriteFrame) => {
       if (!err && sf && sp.isValid) {
