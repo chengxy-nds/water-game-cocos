@@ -35,6 +35,10 @@ const { ccclass, property } = _decorator;
 const UI_ASSET_UUIDS = {
   btnSettings: '1ae13f00-daf7-42f7-b70d-3bb84a725891@f9941',
   btnPower: 'd01f6581-c226-428d-b9d0-0be21119a342@f9941',
+  btnUndo: '3f267627-88c1-4bc6-a4ba-d2dccfba2090@f9941',
+  btnShuffle: 'b591d898-4c40-476b-b280-536fa9c0d5b5@f9941',
+  btnAddBottle: '21560661-655f-46e2-8805-ca9d1ed4f47d@f9941',
+  btnLevel: 'a9ea2da3-f9d8-4558-b2e8-b78298b5d56e@f9941',
   levelPill: '9b543135-bf6d-4a99-af58-dc032e2d4343@f9941',
   badgeRed1: '6502b239-5c1a-42bf-8019-dd68055c46ab@f9941',
   badgeVideo: '3024b34c-d827-4621-8f89-524a0904e8f4@f9941',
@@ -159,7 +163,7 @@ export class GameManager extends Component {
     }
     btnSettings.setPosition(-155, 0, 0);
     const setTrans = btnSettings.getComponent(UITransform) || btnSettings.addComponent(UITransform);
-    setTrans.setContentSize(42, 42);
+    setTrans.setContentSize(48, 48);
     const setSp = btnSettings.getComponent(Sprite) || btnSettings.addComponent(Sprite);
     setSp.sizeMode = Sprite.SizeMode.CUSTOM;
     assetManager.loadAny(UI_ASSET_UUIDS.btnSettings, (err, sf: SpriteFrame) => {
@@ -180,7 +184,7 @@ export class GameManager extends Component {
     }
     btnPower.setPosition(155, 0, 0);
     const pwrTrans = btnPower.getComponent(UITransform) || btnPower.addComponent(UITransform);
-    pwrTrans.setContentSize(42, 42);
+    pwrTrans.setContentSize(48, 48);
     const pwrSp = btnPower.getComponent(Sprite) || btnPower.addComponent(Sprite);
     pwrSp.sizeMode = Sprite.SizeMode.CUSTOM;
     assetManager.loadAny(UI_ASSET_UUIDS.btnPower, (err, sf: SpriteFrame) => {
@@ -277,20 +281,28 @@ export class GameManager extends Component {
 
     footer.setPosition(0, -490, 0);
 
-    const shuffleBtn = footer.getChildByName('BtnShuffle');
-    if (shuffleBtn) {
-      this.ensureButtonBadge(shuffleBtn, UI_ASSET_UUIDS.badgeRed1, 24, 22);
-    }
+    const btnConfigs = [
+      { name: 'BtnShuffle', uuid: UI_ASSET_UUIDS.btnShuffle },
+      { name: 'BtnAddBottle', uuid: UI_ASSET_UUIDS.btnAddBottle },
+      { name: 'BtnUndo', uuid: UI_ASSET_UUIDS.btnUndo },
+    ];
 
-    const addBtn = footer.getChildByName('BtnAddBottle');
-    if (addBtn) {
-      this.ensureButtonBadge(addBtn, UI_ASSET_UUIDS.badgeVideo, 26, 22);
-    }
-
-    const undoBtn = footer.getChildByName('BtnUndo');
-    if (undoBtn) {
-      this.ensureButtonBadge(undoBtn, UI_ASSET_UUIDS.badgeVideo, 26, 22);
-    }
+    btnConfigs.forEach((cfg) => {
+      const btn = footer.getChildByName(cfg.name);
+      if (btn) {
+        const trans = btn.getComponent(UITransform) || btn.addComponent(UITransform);
+        trans.setContentSize(58, 58);
+        const sp = btn.getComponent(Sprite) || btn.addComponent(Sprite);
+        sp.sizeMode = Sprite.SizeMode.CUSTOM;
+        assetManager.loadAny(cfg.uuid, (err, sf: SpriteFrame) => {
+          if (!err && sf && sp.isValid) {
+            sp.spriteFrame = sf;
+            trans.setContentSize(58, 58);
+          }
+        });
+        this.ensureButtonBadge(btn, UI_ASSET_UUIDS.badgeGold, 22, 22);
+      }
+    });
   }
 
   private ensureButtonBadge(btnNode: Node, uuid: string, w: number, h: number) {
