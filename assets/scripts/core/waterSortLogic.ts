@@ -38,11 +38,11 @@ export function canSelectBottle(b: Bottle | undefined, showToast?: (msg: string)
     return false;
   }
   if (b.special === 'ice_base') {
-    showToast?.(`❄️ 瓶底被寒冰冻结（还可接水）！再完成 ${b.poursToBreak || 1} 次倒水自动震碎寒冰`);
+    showToast?.(`❄️ 冰霜封印中：向该瓶注入同色药水或封存满瓶可破冰（剩 ${b.poursToBreak || 1} 层）！`);
     return false;
   }
   if (b.special === 'stone_base') {
-    showToast?.(`🪨 瓶底被岩石卡住（还可接水）！再完成 ${b.poursToBreak || 1} 次倒水自动震碎岩石`);
+    showToast?.(`🔒 鎏金锁扣锁定中：需在场上凑满封存 ${b.poursToBreak || 1} 瓶药水方可解开！`);
     return false;
   }
   if (b.special === 'ad_cam' || b.special === 'ad_cam_blue') return false;
@@ -181,6 +181,7 @@ export function findBestPourMove(bottles: Bottle[]): { srcIdx: number; dstIdx: n
       let score = 0;
       if (dst.layers.length > 0) {
         score += 100;
+        if (dst.special === 'ice_base') score += 65;
         // 一次性转移全部同色
         if (freeSpace >= srcTopSame) score += 50;
         // 凑满封瓶

@@ -209,15 +209,15 @@ export class GameManager extends Component {
       const trans = bigNumNode.addComponent(UITransform);
       trans.setContentSize(160, 32);
       this._bigNumLabel = bigNumNode.addComponent(Label);
-      this._bigNumLabel.fontSize = 18;
-      this._bigNumLabel.lineHeight = 20;
+      this._bigNumLabel.fontSize = 34;
+      this._bigNumLabel.lineHeight = 36;
       this._bigNumLabel.isBold = true;
       this._bigNumLabel.color = new Color(255, 255, 255, 255);
     } else {
       this._bigNumLabel = bigNumNode.getComponent(Label);
       if (this._bigNumLabel) {
-        this._bigNumLabel.fontSize = 18;
-        this._bigNumLabel.lineHeight = 20;
+        this._bigNumLabel.fontSize = 34;
+        this._bigNumLabel.lineHeight = 36;
       }
     }
     bigNumNode.setPosition(0, 10, 0);
@@ -912,21 +912,43 @@ export class GameManager extends Component {
       this.showToast('⏳ 满瓶落塞封存，流沙倒计时危机解除！');
     }
 
-    // C. 全局步进结算：冰底座/石底座 + 冰封瓶口 + 流沙倒计时
+    // C. v8 策略机关精密结算：
+    //    - 冰晶凝霜瓶 (ice_base)：唯有【直接向该冰瓶注入同色】或【场上凑满封存整瓶】时才消融 1 层
+    //    - 鎏金锁扣瓶 (stone_base)：唯有【场上凑满封存整瓶】或【将该瓶自身凑满】时才崩解 1 层
+    const dstWillCompleteNow = isCompleteBottle(dstBottle);
+
     for (let bIdx = 0; bIdx < this._bottles.length; bIdx++) {
       const b = this._bottles[bIdx];
       if (b.removed || b.corked) continue;
 
-      // 冰座/石座递减
-      const pours = b.poursRemaining ?? b.poursToBreak;
-      if ((b.special === 'ice_base' || b.special === 'stone_base') && pours && pours > 0) {
-        const nextPours = pours - 1;
-        b.poursRemaining = nextPours;
-        b.poursToBreak = nextPours;
-        if (nextPours === 0) {
-          const wasIce = b.special === 'ice_base';
-          b.special = 'none';
-          this.showToast(wasIce ? '🧊 倾倒共振：极地霜晶底座已震碎破冰！' : '🪨 倾倒共振：曜石底座已震碎破石！');
+      // 冰晶凝霜瓶判定
+      if (b.special === 'ice_base') {
+        const pours = b.poursRemaining ?? b.poursToBreak ?? 1;
+        const directThermalHit = (bIdx === dstIndex);
+        if (directThermalHit || dstWillCompleteNow) {
+          const nextPours = (directThermalHit && dstWillCompleteNow) ? 0 : Math.max(0, pours - 1);
+          b.poursRemaining = nextPours;
+          b.poursToBreak = nextPours;
+          if (nextPours === 0) {
+            b.special = 'none';
+            this.showToast('🧊 冰晶完全消融，该瓶已恢复自由出水！');
+          } else {
+            this.showToast(`❄️ 冰晶正在消融！还需注入或满瓶 ${nextPours} 次`);
+          }
+        }
+      } else if (b.special === 'stone_base') {
+        // 鎏金锁扣瓶判定
+        const pours = b.poursRemaining ?? b.poursToBreak ?? 1;
+        if (dstWillCompleteNow || (bIdx === dstIndex && dstBottle.layers.length === (dstBottle.maxCap || 4))) {
+          const nextPours = (bIdx === dstIndex && dstWillCompleteNow) ? 0 : Math.max(0, pours - 1);
+          b.poursRemaining = nextPours;
+          b.poursToBreak = nextPours;
+          if (nextPours === 0) {
+            b.special = 'none';
+            this.showToast('🔒 鎏金锁扣崩解，该瓶已恢复出水！');
+          } else {
+            this.showToast(`🔒 鎏金锁扣松动！还需封存 ${nextPours} 瓶药水`);
+          }
         }
       }
 

@@ -46,31 +46,31 @@
         "pivotX": 0.5,
         "pivotY": 0.5,
         "meshType": 0,
-        "offsetX": 0,
-        "offsetY": 0,
-        "trimX": 12,
-        "trimY": 12,
-        "width": 488,
-        "height": 680,
-        "rawWidth": 512,
-        "rawHeight": 704,
+        "offsetX": -13,
+        "offsetY": -8,
+        "trimX": 0,
+        "trimY": 18,
+        "width": 230,
+        "height": 100,
+        "rawWidth": 256,
+        "rawHeight": 120,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
         "borderRight": 0,
         "vertices": {
           "rawPosition": [
-            -244,
-            -340,
+            -115,
+            -50,
             0,
-            244,
-            -340,
+            115,
+            -50,
             0,
-            -244,
-            340,
+            -115,
+            50,
             0,
-            244,
-            340,
+            115,
+            50,
             0
           ],
           "indexes": [
@@ -82,38 +82,38 @@
             3
           ],
           "uv": [
-            12,
-            692,
-            500,
-            692,
-            12,
-            12,
-            500,
-            12
+            0,
+            102,
+            230,
+            102,
+            0,
+            2,
+            230,
+            2
           ],
           "nuv": [
-            0.0234375,
-            0.017045454545454544,
-            0.9765625,
-            0.017045454545454544,
-            0.0234375,
-            0.9829545454545454,
-            0.9765625,
-            0.9829545454545454
+            0,
+            0.016666666666666666,
+            0.8984375,
+            0.016666666666666666,
+            0,
+            0.85,
+            0.8984375,
+            0.85
           ],
           "minPos": [
-            -244,
-            -340,
+            -115,
+            -50,
             0
           ],
           "maxPos": [
-            244,
-            340,
+            115,
+            50,
             0
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "ef431f4e-76d5-452a-8b85-85b4d4f89dde@6c48a",
+        "imageUuidOrDatabaseUri": "b8fa0110-3882-4aa1-92be-b1e600a01001@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -129,6 +129,6 @@
     "type": "sprite-frame",
     "fixAlphaTransparencyArtifacts": false,
     "hasAlpha": true,
-    "redirect": "ef431f4e-76d5-452a-8b85-85b4d4f89dde@6c48a"
+    "redirect": "b8fa0110-3882-4aa1-92be-b1e600a01001@6c48a"
   }
 }
