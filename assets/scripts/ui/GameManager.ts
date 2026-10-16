@@ -78,6 +78,7 @@ export class GameManager extends Component {
   private _modeBannerTextLabel: Label | null = null;
   private _modeBannerProgressLabel: Label | null = null;
   private _levelLabel: Label | null = null;
+  private _bigNumLabel: Label | null = null;
   private _movesLabel: Label | null = null;
 
   // 果冻玻璃弹窗节点
@@ -190,49 +191,80 @@ export class GameManager extends Component {
       this.handleQuickUnlockAll();
     });
 
-    // 3. 中间琉璃发光圆角胶囊底座 (LevelPill)
-    let pillNode = header.getChildByName('LevelPill');
-    if (!pillNode) {
-      pillNode = new Node('LevelPill');
-      pillNode.layer = header.layer;
-      pillNode.setParent(header);
-      pillNode.setSiblingIndex(0);
+    // 3. 顶部中央大字号艺术数字与副标题 (100% 对齐 demo/v2.html .zen-big-num & .level-pill)
+    let centerGroup = header.getChildByName('CenterGroup');
+    if (!centerGroup) {
+      centerGroup = new Node('CenterGroup');
+      centerGroup.layer = header.layer;
+      centerGroup.setParent(header);
+      centerGroup.setPosition(0, 0, 0);
     }
-    pillNode.setPosition(0, 0, 0);
-    const pillTrans = pillNode.getComponent(UITransform) || pillNode.addComponent(UITransform);
-    pillTrans.setContentSize(136, 38);
-    const pillSp = pillNode.getComponent(Sprite) || pillNode.addComponent(Sprite);
-    pillSp.sizeMode = Sprite.SizeMode.CUSTOM;
-    assetManager.loadAny(UI_ASSET_UUIDS.levelPill, (err, sf: SpriteFrame) => {
-      if (!err && sf && pillSp.isValid) pillSp.spriteFrame = sf;
-    });
-    pillNode.off(Node.EventType.TOUCH_END);
-    pillNode.on(Node.EventType.TOUCH_END, () => {
-      this.bounceButton(pillNode!);
+
+    // A. 上方纯白立体艺术大字 (100% 对标 v5: "第 X 关")
+    let bigNumNode = centerGroup.getChildByName('BigNum');
+    if (!bigNumNode) {
+      bigNumNode = new Node('BigNum');
+      bigNumNode.layer = header.layer;
+      bigNumNode.setParent(centerGroup);
+      const trans = bigNumNode.addComponent(UITransform);
+      trans.setContentSize(160, 32);
+      this._bigNumLabel = bigNumNode.addComponent(Label);
+      this._bigNumLabel.fontSize = 18;
+      this._bigNumLabel.lineHeight = 20;
+      this._bigNumLabel.isBold = true;
+      this._bigNumLabel.color = new Color(255, 255, 255, 255);
+    } else {
+      this._bigNumLabel = bigNumNode.getComponent(Label);
+      if (this._bigNumLabel) {
+        this._bigNumLabel.fontSize = 18;
+        this._bigNumLabel.lineHeight = 20;
+      }
+    }
+    bigNumNode.setPosition(0, 10, 0);
+
+    // B. 下方副标题胶囊 (100% 对标 v5: "已封存 0/X" / "剩余步数 X")
+    let subtitleNode = centerGroup.getChildByName('Subtitle');
+    if (!subtitleNode) {
+      subtitleNode = new Node('Subtitle');
+      subtitleNode.layer = header.layer;
+      subtitleNode.setParent(centerGroup);
+      const trans = subtitleNode.addComponent(UITransform);
+      trans.setContentSize(150, 26);
+      
+      const pillSp = subtitleNode.addComponent(Sprite);
+      pillSp.sizeMode = Sprite.SizeMode.CUSTOM;
+      assetManager.loadAny(UI_ASSET_UUIDS.levelPill, (err, sf) => {
+        if (!err && sf && pillSp.isValid) pillSp.spriteFrame = sf;
+      });
+
+      const lblNode = new Node('Label');
+      lblNode.layer = header.layer;
+      lblNode.setParent(subtitleNode);
+      this._levelLabel = lblNode.addComponent(Label);
+      this._levelLabel.fontSize = 12;
+      this._levelLabel.lineHeight = 14;
+      this._levelLabel.isBold = true;
+      this._levelLabel.color = new Color(255, 255, 255, 255);
+    } else {
+      this._levelLabel = subtitleNode.getComponentInChildren(Label);
+    }
+    subtitleNode.setPosition(0, -18, 0);
+
+    // 点击中央区域可切换测试下一关
+    centerGroup.off(Node.EventType.TOUCH_END);
+    centerGroup.on(Node.EventType.TOUCH_END, () => {
+      this.bounceButton(centerGroup!);
       this.handleNextLevelCheat();
     });
 
-    // 4. 关卡文字置于胶囊中央
-    let lblNode = header.getChildByName('LevelLabel');
-    if (lblNode) {
-      lblNode.setPosition(0, 0, 0);
-      this._levelLabel = lblNode.getComponent(Label);
-      if (this._levelLabel) {
-        this._levelLabel.string = `第 ${this._currentLevelNum} 关`;
-        this._levelLabel.fontSize = 17;
-        this._levelLabel.lineHeight = 20;
-        this._levelLabel.isBold = true;
-      }
-    }
-
-    const movesNode = header.getChildByName('MovesLabel');
-    this._movesLabel = movesNode?.getComponent(Label) || null;
-    if (this._movesLabel) this._movesLabel.node.active = false;
+    // 隐藏废弃节点
+    const oldPill = header.getChildByName('LevelPill');
+    if (oldPill) oldPill.active = false;
+    const oldLbl = header.getChildByName('LevelLabel');
+    if (oldLbl) oldLbl.active = false;
+    const oldMoves = header.getChildByName('MovesLabel');
+    if (oldMoves) oldMoves.active = false;
   }
-
-  /**
-   * 100% 对标 HTML 底部 4 大道具栏带右上角果冻角标
-   */
   private setupHighFidelityFooter() {
     const footer = this.node.getChildByName('Footer');
     if (!footer) return;
@@ -659,10 +691,17 @@ export class GameManager extends Component {
     this._isBusy = false;
 
     // 1. 顶部标题刷新
-    if (this._levelLabel) {
-      this._levelLabel.string = `第 ${this._currentLevelNum} 关`;
+    if (this._bigNumLabel) {
+      if (this._remainingMoves !== null) {
+        this._bigNumLabel.string = `${this._remainingMoves}`;
+      } else {
+        this._bigNumLabel.string = `${this._currentLevelNum}`;
+      }
     }
-    this.updateMovesDisplay();
+    if (this._levelLabel) {
+      const tag = this._currentCfg?.shortTag || this._currentCfg?.title || `第 ${this._currentLevelNum} 关`;
+      this._levelLabel.string = this._remainingMoves !== null ? `步数 · ${tag}` : `第 ${this._currentLevelNum} 关 · ${tag}`;
+    }
 
     // 2. 双模式 UI 切换
     if (this._shoppingBagsNode) {
@@ -844,6 +883,7 @@ export class GameManager extends Component {
     if (this._remainingMoves !== null) {
       this._remainingMoves = Math.max(0, this._remainingMoves - 1);
       this.updateMovesDisplay();
+      // 100% 对齐 v7.html：步数更新时「第 X 关」文字保持绝对稳固静止
     }
 
     // 破雾盲盒揭晓
@@ -917,6 +957,7 @@ export class GameManager extends Component {
       if (dstTube) {
         await dstTube.playCorkDropAnimation();
       }
+      // 100% 对齐 v7.html：满瓶时能量注入瓶底麻布软垫点亮金星，大标题保持静止稳固
       this.showToast(`🎉 满瓶封存：整瓶【${COLORS[movingColor].name}】已落塞入库！`);
 
       // 礼盒契约解除星缎礼袍
@@ -1003,6 +1044,8 @@ export class GameManager extends Component {
     if (this._remainingMoves !== null && this._remainingMoves <= 3) {
       this._remainingMoves += 5;
       this.updateMovesDisplay();
+      this.playBigNumPulse(true);
+      this.spawnFloatDelta("+5步", "#fde047");
       this.showToast('🎬 激励辅助奖励：已为您增加 +5 步！');
       return;
     }
@@ -1124,4 +1167,47 @@ export class GameManager extends Component {
     const nextLv = this._currentLevelNum >= 10 ? 1 : this._currentLevelNum + 1;
     this.loadLevel(nextLv);
   }
+
+  /**
+   * 100% 对齐 demo/v3.html: 满瓶金辉脉冲 (zenSealBurstAnim) 与步进弹跳 (zenStepTickAnim)
+   */
+  private playBigNumPulse(isSealBurst: boolean = false) {
+    if (!this._bigNumLabel) return;
+    // 100% 对齐 v7.html 最新要求：步数扣减或日常操作时保持「第 X 关」文字绝对稳固静止不动
+    if (!isSealBurst) return;
+
+    const n = this._bigNumLabel.node;
+    tween(n).stop();
+    n.setScale(Vec3.ONE);
+    tween(n)
+      .to(0.18, { scale: new Vec3(1.15, 1.15, 1) }, { easing: 'backOut' })
+      .to(0.22, { scale: new Vec3(1.0, 1.0, 1) }, { easing: 'quadOut' })
+      .start();
+  }
+
+  /**
+   * 100% 对齐 demo/v3.html: 大数字旁飘起浮字 (+1 / -1 / +5)
+   */
+  private spawnFloatDelta(text: string, colHex: string = '#fff8a6') {
+    if (!this._bigNumLabel) return;
+    const parentNode = this._bigNumLabel.node.parent || this._bigNumLabel.node;
+    const floatNode = new Node('FloatDelta');
+    floatNode.layer = parentNode.layer;
+    floatNode.setParent(parentNode);
+    floatNode.setPosition(45, 14, 0);
+
+    const lbl = floatNode.addComponent(Label);
+    lbl.string = text;
+    lbl.fontSize = 16;
+    lbl.lineHeight = 18;
+    lbl.isBold = true;
+    lbl.color = Color.fromHEX(new Color(), colHex);
+
+    tween(floatNode)
+      .to(0.20, { position: new Vec3(45, 20, 0), scale: new Vec3(1.15, 1.15, 1) })
+      .to(0.50, { position: new Vec3(45, 34, 0), scale: new Vec3(0.9, 0.9, 1) })
+      .call(() => floatNode.destroy())
+      .start();
+  }
+
 }

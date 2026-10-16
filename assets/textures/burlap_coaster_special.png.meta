@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "b8fa0110-3882-4aa1-92be-b1e600a01002",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "b8fa0110-3882-4aa1-92be-b1e600a01002@6c48a",
+      "displayName": "burlap_coaster_special",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "b8fa0110-3882-4aa1-92be-b1e600a01002",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "b8fa0110-3882-4aa1-92be-b1e600a01002@f9941",
+      "displayName": "burlap_coaster_special",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 12,
+        "trimY": 12,
+        "width": 488,
+        "height": 680,
+        "rawWidth": 512,
+        "rawHeight": 704,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "vertices": {
+          "rawPosition": [
+            -244,
+            -340,
+            0,
+            244,
+            -340,
+            0,
+            -244,
+            340,
+            0,
+            244,
+            340,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            12,
+            692,
+            500,
+            692,
+            12,
+            12,
+            500,
+            12
+          ],
+          "nuv": [
+            0.0234375,
+            0.017045454545454544,
+            0.9765625,
+            0.017045454545454544,
+            0.0234375,
+            0.9829545454545454,
+            0.9765625,
+            0.9829545454545454
+          ],
+          "minPos": [
+            -244,
+            -340,
+            0
+          ],
+          "maxPos": [
+            244,
+            340,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "ef431f4e-76d5-452a-8b85-85b4d4f89dde@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "ef431f4e-76d5-452a-8b85-85b4d4f89dde@6c48a"
+  }
+}
