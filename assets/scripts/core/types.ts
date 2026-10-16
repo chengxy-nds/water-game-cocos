@@ -1,17 +1,16 @@
 export type ColorKey =
-  | 'red'
-  | 'yellow'
-  | 'blue'
   | 'green'
-  | 'purple'
   | 'orange'
   | 'cyan'
+  | 'yellow'
+  | 'blue'
+  | 'purple'
+  | 'red'
   | 'pink'
   | 'mystery_dark';
 
 export interface ColorDef {
   name: string;
-  hex: string;
   left: string;
   mid: string;
   highlight: string;
@@ -31,11 +30,14 @@ export type BottleSpecial =
   | 'stone_base'
   | 'paper_bag'
   | 'ad_cam'
-  | 'ad_cam_blue';
+  | 'ad_cam_blue'
+  | 'color_lock'
+  | 'one_way_in'
+  | 'one_way_out';
 
 export interface Bottle {
   id: number;
-  maxCap: number; // 2, 4, 6, 8
+  maxCap: number;
   layers: ColorKey[];
   special: BottleSpecial;
   mysteryCount?: number;
@@ -43,6 +45,10 @@ export interface Bottle {
   catTargetColor?: ColorKey;
   unlockOrder?: number;
   poursToBreak?: number;
+  poursRemaining?: number;
+  requiredColor?: ColorKey | null;
+  countdownMoves?: number | null;
+  frozenTurns?: number;
   removed?: boolean;
   corked?: boolean;
   corkAnimProgress?: number;
@@ -65,23 +71,28 @@ export interface MechanicIntro {
   sub?: string;
   desc: string;
   sampleBottle?: () => Bottle;
+  previewBottle?: Bottle;
 }
 
 export interface LevelConfig {
   id?: number;
-  levelNum: number;
-  chapter: number;
-  pos: number;
-  waveStars: number;
+  levelNum?: number;
+  chapter?: number;
+  pos?: number;
+  waveStars?: number;
   title: string;
-  shortTag: string;
-  hasBags: boolean;
-  isVariedHeight: boolean;
-  isCatBossLevel: boolean;
-  gridClass: string;
+  shortName?: string;
+  shortTag?: string;
+  tag?: string;
+  desc?: string;
+  hasBags?: boolean;
+  isVariedHeight?: boolean;
+  isCatBossLevel?: boolean;
+  gridClass?: string;
   moveLimit: number | null;
-  optimalMoves: number;
-  introMechanicKey: string | null;
+  optimalMoves?: number;
+  introMechanicKey?: string | null;
+  mechanicIntro?: MechanicIntro | null;
   bags: Bag[];
   bottles: () => Bottle[];
 }

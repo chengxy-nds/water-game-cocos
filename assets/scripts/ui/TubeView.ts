@@ -44,6 +44,11 @@ export class TubeView extends Component {
   private _obstacleBaseLabel: Label | null = null;
   private _mysteryBadgeNode: Node | null = null;
   private _capBadgeNode: Node | null = null;
+  private _neckGraphics: Graphics | null = null;
+  private _countdownBadgeNode: Node | null = null;
+  private _countdownBadgeLabel: Label | null = null;
+  private _countdownGraphics: Graphics | null = null;
+  private _frozenTurnsLabel: Label | null = null;
 
   // 纯原生盲盒居中问号 Label 缓存池
   private _mysteryLabels: Node[] = [];
@@ -205,6 +210,63 @@ export class TubeView extends Component {
         trans.setContentSize(36, 18);
         this._capBadgeNode.addComponent(Sprite);
         this._capBadgeNode.setPosition(0, -78, 0);
+      }
+    }
+
+        // 6.5 瓶口特殊机关绘制节点 (NeckGraphics)
+    if (!this._neckGraphics) {
+      let neckNode = this.node.getChildByName('NeckGraphics');
+      if (!neckNode) {
+        neckNode = new Node('NeckGraphics');
+        neckNode.layer = this.node.layer;
+        neckNode.setParent(this.node);
+      }
+      this._neckGraphics = neckNode.getComponent(Graphics) || neckNode.addComponent(Graphics);
+    }
+    if (!this._frozenTurnsLabel) {
+      let fNode = this.node.getChildByName('FrozenTurnsLabel');
+      if (!fNode) {
+        fNode = new Node('FrozenTurnsLabel');
+        fNode.layer = this.node.layer;
+        fNode.setParent(this.node);
+        const trans = fNode.addComponent(UITransform);
+        trans.setContentSize(24, 20);
+        this._frozenTurnsLabel = fNode.addComponent(Label);
+        this._frozenTurnsLabel.fontSize = 11;
+        this._frozenTurnsLabel.lineHeight = 12;
+        this._frozenTurnsLabel.isBold = true;
+        this._frozenTurnsLabel.color = new Color(184, 248, 255, 255);
+      } else {
+        this._frozenTurnsLabel = fNode.getComponent(Label) || null;
+      }
+      fNode.active = false;
+    }
+
+    // 6.6 倒计时沙漏怀表节点 (CountdownBadge)
+    if (!this._countdownBadgeNode) {
+      this._countdownBadgeNode = this.node.getChildByName('CountdownBadge');
+      if (!this._countdownBadgeNode) {
+        this._countdownBadgeNode = new Node('CountdownBadge');
+        this._countdownBadgeNode.layer = this.node.layer;
+        this._countdownBadgeNode.setParent(this.node);
+        const trans = this._countdownBadgeNode.addComponent(UITransform);
+        trans.setContentSize(42, 42);
+        this._countdownBadgeNode.setPosition(0, 15, 0);
+
+        const lblNode = new Node('CountdownLabel');
+        lblNode.layer = this.node.layer;
+        lblNode.setParent(this._countdownBadgeNode);
+        lblNode.setPosition(5, 0, 0);
+        this._countdownBadgeLabel = lblNode.addComponent(Label);
+        this._countdownBadgeLabel.fontSize = 13;
+        this._countdownBadgeLabel.lineHeight = 14;
+        this._countdownBadgeLabel.isBold = true;
+        this._countdownBadgeLabel.color = new Color(255, 255, 255, 255);
+        this._countdownGraphics = this._countdownBadgeNode.addComponent(Graphics);
+      } else {
+        const lblNode = this._countdownBadgeNode.getChildByName('CountdownLabel');
+        this._countdownBadgeLabel = lblNode?.getComponent(Label) || null;
+        this._countdownGraphics = this._countdownBadgeNode.getComponent(Graphics) || this._countdownBadgeNode.addComponent(Graphics);
       }
     }
 
@@ -764,6 +826,18 @@ export class TubeView extends Component {
     });
   }
 
+    public playVanishAnimation(): Promise<void> {
+    return new Promise((resolve) => {
+      tween(this.node)
+        .to(0.35, { scale: new Vec3(0.01, 0.01, 1) }, { easing: 'backIn' })
+        .call(() => {
+          this.node.active = false;
+          resolve();
+        })
+        .start();
+    });
+  }
+
   public updateBadgeState() {
     if (!this._bottleData) return;
     const isSpecialBadge = (this._bottleData.special === 'ad_cam' || this._bottleData.special === 'ad_cam_blue') && !this._bottleData.isGiantCat;
@@ -776,7 +850,7 @@ export class TubeView extends Component {
     }
   }
 
-  public updateSpecialVisuals() {
+    public updateSpecialVisuals() {
     if (!this._bottleData) return;
     const special = this._bottleData.special;
     const maxCap = this._bottleData.maxCap || 4;
@@ -809,7 +883,7 @@ export class TubeView extends Component {
       }
     }
 
-    // 2. 瓶底立体底座 (ice_base / paper_bag)，灵猫瓶绝对无底座
+    // 2. 瓶底立体底座 (ice_base / paper_bag / stone_base)，灵猫瓶绝对无底座
     if (this._obstacleBaseNode) {
       const isIce = (special === 'ice_base' || special === 'full_ice') && !isCat;
       const isPaper = (special === 'paper_bag' || special === 'stone_base') && !isCat;
@@ -841,20 +915,20 @@ export class TubeView extends Component {
           });
         }
         if (this._obstacleBaseLabel) {
-          this._obstacleBaseLabel.string = this._bottleData.poursRemaining ? `${this._bottleData.poursRemaining}次` : '';
+          const pours = this._bottleData.poursRemaining ?? this._bottleData.poursToBreak;
+          this._obstacleBaseLabel.string = pours ? `${pours}次` : '';
           this._obstacleBaseLabel.node.setPosition(0, isIce ? -8 : -24, 0);
         }
       }
     }
 
     // 3. 瓶底层数胶囊 (CapBadge: 2层, 4层, 6层)
-    // 关键对齐：仅在异形瓶关卡 (isVariedHeight) 且非灵猫瓶时才显示！普通关卡绝对不显示！
     if (this._capBadgeNode) {
       const showCapBadge = this._isVariedHeight && !isCat;
       this._capBadgeNode.active = showCapBadge;
       if (showCapBadge) {
         const sp = this._capBadgeNode.getComponent(Sprite);
-        const badgeUuid = maxCap === 2 ? ASSET_UUIDS.cap2 : (maxCap === 6 ? ASSET_UUIDS.cap6 : ASSET_UUIDS.cap4);
+        const badgeUuid = maxCap === 2 ? ASSET_UUIDS.cap2 : maxCap === 6 ? ASSET_UUIDS.cap6 : ASSET_UUIDS.cap4;
         if (sp) {
           assetManager.loadAny(badgeUuid, (err, sf: SpriteFrame) => {
             if (!err && sf && sp.isValid) sp.spriteFrame = sf;
@@ -862,5 +936,154 @@ export class TubeView extends Component {
         }
       }
     }
-  }
+
+    // 4. 瓶口机关特效 (NeckGraphics: 色环瓶 / 单向漏斗 / 单向古瓶 / 冰封瓶口)
+    if (this._neckGraphics) {
+      const ng = this._neckGraphics;
+      ng.clear();
+      const neckY = isCat ? 98 : 74;
+
+      // 4A. 专属色环瓶 (color_lock)
+      if (special === 'color_lock' && this._bottleData.requiredColor && !this._bottleData.corked) {
+        const reqC = getColor(this._bottleData.requiredColor);
+        const colHex = Color.fromHEX(new Color(), reqC.mid);
+        // 外金环
+        ng.lineWidth = 3.5;
+        ng.strokeColor = new Color(245, 158, 11, 255);
+        ng.circle(0, neckY, 14);
+        ng.stroke();
+        // 宝石色内环
+        ng.fillColor = colHex;
+        ng.circle(0, neckY, 11);
+        ng.fill();
+        // 高光星芒
+        ng.fillColor = new Color(255, 255, 255, 220);
+        ng.circle(-3, neckY + 3, 2.5);
+        ng.fill();
+      }
+      // 4B. 单向漏斗瓶 (one_way_in)
+      else if (special === 'one_way_in' && !this._bottleData.corked) {
+        // 金色漏斗外框
+        ng.fillColor = new Color(245, 158, 11, 230);
+        ng.moveTo(-16, neckY + 12);
+        ng.lineTo(16, neckY + 12);
+        ng.lineTo(7, neckY - 6);
+        ng.lineTo(-7, neckY - 6);
+        ng.close();
+        ng.fill();
+        // 翡翠向下箭头
+        ng.fillColor = new Color(52, 211, 153, 255);
+        ng.moveTo(-5, neckY + 8);
+        ng.lineTo(5, neckY + 8);
+        ng.lineTo(0, neckY - 2);
+        ng.close();
+        ng.fill();
+      }
+      // 4C. 单向古瓶 (one_way_out)
+      else if (special === 'one_way_out' && !this._bottleData.corked) {
+        // 金色双翼向上喷泉出水口
+        ng.fillColor = new Color(234, 179, 8, 240);
+        ng.moveTo(-14, neckY - 6);
+        ng.lineTo(14, neckY - 6);
+        ng.lineTo(0, neckY + 14);
+        ng.close();
+        ng.fill();
+        // 向上白色泉芯
+        ng.fillColor = new Color(255, 255, 255, 255);
+        ng.moveTo(-5, neckY - 2);
+        ng.lineTo(5, neckY - 2);
+        ng.lineTo(0, neckY + 8);
+        ng.close();
+        ng.fill();
+      }
+      // 4D. 流沙超时寒冰封口冠 (frozenTurns > 0)
+      else if (this._bottleData.frozenTurns && this._bottleData.frozenTurns > 0 && !this._bottleData.corked) {
+        // 冰晶覆罩外形与高光描边
+        ng.fillColor = new Color(56, 189, 248, 220);
+        ng.rect(-20, neckY - 9, 40, 18);
+        ng.fill();
+        ng.strokeColor = new Color(255, 255, 255, 255);
+        ng.lineWidth = 1.6;
+        ng.rect(-20, neckY - 9, 40, 18);
+        ng.stroke();
+        // 中央小冰盾
+        ng.fillColor = new Color(2, 75, 120, 240);
+        ng.circle(0, neckY, 8.5);
+        ng.fill();
+        ng.strokeColor = new Color(184, 248, 255, 255);
+        ng.lineWidth = 1.2;
+        ng.circle(0, neckY, 8.5);
+        ng.stroke();
+
+        if (this._frozenTurnsLabel) {
+          this._frozenTurnsLabel.node.active = true;
+          this._frozenTurnsLabel.string = `${this._bottleData.frozenTurns}`;
+          this._frozenTurnsLabel.node.setPosition(0, neckY, 0);
+        }
+      } else {
+        if (this._frozenTurnsLabel) this._frozenTurnsLabel.node.active = false;
+      }
+    }
+
+    // 5. 倒计时沙漏怀表 (countdownMoves)
+    if (this._countdownBadgeNode) {
+      const moves = this._bottleData.countdownMoves;
+      const isBomb = typeof moves === 'number' && moves > 0 && !this._bottleData.corked;
+      this._countdownBadgeNode.active = isBomb;
+      if (isBomb) {
+        const isDanger = moves <= 2;
+        if (this._countdownGraphics) {
+          const cg = this._countdownGraphics;
+          cg.clear();
+          // 悬挂金链 (从瓶身肩部向内悬挂)
+          cg.strokeColor = new Color(251, 191, 36, 180);
+          cg.lineWidth = 1.5;
+          cg.moveTo(-24, 22);
+          cg.lineTo(0, 8);
+          cg.lineTo(24, 22);
+          cg.stroke();
+
+          // 怀表顶冠
+          cg.strokeColor = new Color(253, 224, 71, 255);
+          cg.lineWidth = 1.2;
+          cg.circle(0, 15, 3.0);
+          cg.stroke();
+
+          // 3D 怀表外框 (危险时深红，平日金棕)
+          cg.fillColor = isDanger ? new Color(185, 28, 28, 250) : new Color(245, 158, 11, 250);
+          cg.circle(0, 0, 16);
+          cg.fill();
+          cg.strokeColor = new Color(255, 255, 255, 255);
+          cg.lineWidth = 1.6;
+          cg.circle(0, 0, 16);
+          cg.stroke();
+
+          // 怀表内芯
+          cg.fillColor = isDanger ? new Color(76, 5, 25, 255) : new Color(30, 27, 75, 255);
+          cg.circle(0, 0, 13);
+          cg.fill();
+
+          // 左侧微缩金质沙漏
+          cg.fillColor = new Color(253, 224, 71, 240);
+          cg.moveTo(-8, -5);
+          cg.lineTo(-2, -5);
+          cg.lineTo(-5, 0);
+          cg.close();
+          cg.fill();
+          cg.moveTo(-5, 0);
+          cg.lineTo(-2, 5);
+          cg.lineTo(-8, 5);
+          cg.close();
+          cg.fill();
+        }
+
+        if (this._countdownBadgeLabel) {
+          this._countdownBadgeLabel.string = `${moves}`;
+          this._countdownBadgeLabel.color = isDanger
+            ? new Color(254, 205, 211, 255)
+            : new Color(255, 255, 255, 255);
+          this._countdownBadgeLabel.node.setPosition(4, 0, 0);
+        }
+      }
+    }  }
 }

@@ -21,6 +21,8 @@ import {
   pickNextNeededBagColor,
   checkGameWon,
   isCompleteBottle,
+  releaseObsoleteColorLocks,
+  findBestPourMove,
 } from '../core/waterSortLogic';
 import { getLevelConfig, MECHANIC_INTROS } from '../core/levelGenerator';
 import { COLORS } from '../core/colors';
@@ -773,6 +775,16 @@ export class GameManager extends Component {
       const srcTube = this.gameBoard.getTube(srcIndex);
       if (srcTube) srcTube.setSelected(false);
 
+      const pourColor = srcBottle.layers[srcBottle.layers.length - 1];
+      if (dstBottle.frozenTurns && dstBottle.frozenTurns > 0) {
+        this.showToast(`🧊 目标瓶口已被寒冰封印，还需 ${dstBottle.frozenTurns} 步自动解封！`);
+      } else if (dstBottle.special === 'one_way_out') {
+        this.showToast('⏫ 单向源泉古瓶：仅可向外倾倒，不可注入秘药！');
+      } else if (dstBottle.special === 'color_lock' && dstBottle.requiredColor && pourColor !== dstBottle.requiredColor) {
+        const reqObj = COLORS[dstBottle.requiredColor] || COLORS.blue;
+        this.showToast(`🔒 此瓶只能倒入【${reqObj.name}】！`);
+      }
+
       if (canSelectBottleNoToast(dstBottle)) {
         this._selectedIndex = dstIndex;
         const newTube = this.gameBoard.getTube(dstIndex);
@@ -840,24 +852,68 @@ export class GameManager extends Component {
       this.showToast('✨ 金芒破雾：神秘盲盒秘药已显露真彩！');
     }
 
-    // 倾倒共振解冻霜晶底座
-    for (const b of this._bottles) {
-      if (b.special === 'ice_base' && b.poursRemaining && b.poursRemaining > 0) {
-        b.poursRemaining--;
-        if (b.poursRemaining === 0) {
+    // A. 检查单向出水古瓶 (one_way_out) 是否已排空 -> 腾出空间消散
+    if (srcBottle.special === 'one_way_out' && srcBottle.layers.length === 0) {
+      srcBottle.removed = true;
+      srcBottle.countdownMoves = null;
+      if (srcTube) {
+        await srcTube.playVanishAnimation();
+      }
+      this.showToast('⏫ 单向古瓶已全部倾注完毕，化作星光腾出桌面！');
+    }
+
+    // B. 检查源瓶或目标瓶上的星砂流沙炸弹 (countdownMoves) 是否解除
+    if (srcBottle.countdownMoves && srcBottle.countdownMoves > 0 && srcBottle.layers.length === 0) {
+      srcBottle.countdownMoves = null;
+      this.showToast('⏳ 源瓶已倒空，流沙倒计时危机解除！');
+    }
+    if (dstBottle.countdownMoves && dstBottle.countdownMoves > 0 && isCompleteBottle(dstBottle)) {
+      dstBottle.countdownMoves = null;
+      this.showToast('⏳ 满瓶落塞封存，流沙倒计时危机解除！');
+    }
+
+    // C. 全局步进结算：冰底座/石底座 + 冰封瓶口 + 流沙倒计时
+    for (let bIdx = 0; bIdx < this._bottles.length; bIdx++) {
+      const b = this._bottles[bIdx];
+      if (b.removed || b.corked) continue;
+
+      // 冰座/石座递减
+      const pours = b.poursRemaining ?? b.poursToBreak;
+      if ((b.special === 'ice_base' || b.special === 'stone_base') && pours && pours > 0) {
+        const nextPours = pours - 1;
+        b.poursRemaining = nextPours;
+        b.poursToBreak = nextPours;
+        if (nextPours === 0) {
+          const wasIce = b.special === 'ice_base';
           b.special = 'none';
-          this.showToast('🧊 倾倒共振：极地霜晶底座已震碎破冰！');
+          this.showToast(wasIce ? '🧊 倾倒共振：极地霜晶底座已震碎破冰！' : '🪨 倾倒共振：曜石底座已震碎破石！');
+        }
+      }
+
+      // 冰封瓶口递减
+      if (b.frozenTurns && b.frozenTurns > 0) {
+        b.frozenTurns--;
+        if (b.frozenTurns === 0) {
+          this.showToast('❄️ 瓶口寒冰消融，已恢复注入状态！');
+        }
+      } else if (typeof b.countdownMoves === 'number' && b.countdownMoves > 0) {
+        if (b.layers.length === 0) {
+          b.countdownMoves = null;
+        } else {
+          b.countdownMoves--;
+          if (b.countdownMoves <= 0) {
+            b.countdownMoves = null;
+            b.frozenTurns = 3;
+            this.showToast('⚠️ 流沙倒计时归零！瓶口已被寒冰封印 3 步！');
+          }
         }
       }
     }
 
-    // 刷新棋盘视图
-    if (srcTube) srcTube.init(srcIndex, srcBottle);
-    if (dstTube) dstTube.init(dstIndex, dstBottle);
-
     // 判定满瓶落塞封存
     if (isCompleteBottle(dstBottle)) {
       dstBottle.corked = true;
+      releaseObsoleteColorLocks(this._bottles);
       if (dstTube) {
         await dstTube.playCorkDropAnimation();
       }
@@ -866,6 +922,12 @@ export class GameManager extends Component {
       // 礼盒契约解除星缎礼袍
       this._packedTotal++;
       this.unlockBagOrderObstacles();
+    }
+
+    // 刷新棋盘上所有试管状态
+    for (let i = 0; i < this._bottles.length; i++) {
+      const t = this.gameBoard.getTube(i);
+      if (t) t.init(i, this._bottles[i]);
     }
 
     this._selectedIndex = null;
@@ -898,24 +960,142 @@ export class GameManager extends Component {
   private handleQuickUnlockAll() {
     this._history.push(this.cloneState());
     for (const b of this._bottles) {
-      if (b.special === 'silk_drape' || b.special === 'full_ice' || b.special === 'paper_bag') {
+      if (['silk_drape', 'full_ice', 'paper_bag', 'color_lock', 'ice_base', 'stone_base'].includes(b.special)) {
         b.special = 'none';
       }
-      if (b.poursRemaining) b.poursRemaining = 0;
-      if (b.mysteryCount) b.mysteryCount = 0;
+      b.requiredColor = null;
+      b.poursToBreak = 0;
+      b.poursRemaining = 0;
+      b.mysteryCount = 0;
+      b.countdownMoves = null;
+      b.frozenTurns = 0;
     }
     if (this.gameBoard) {
       this.gameBoard.init(this._bottles, (idx) => this.handleTubeClick(idx));
     }
-    this.showToast('⚡ 闪电神威：全场星缎礼袍、冰雕与盲盒已全部解除！');
+    this.showToast('⚡ 闪电神威：全场星缎、冰雕、色环锁、流沙炸弹与盲盒已全部解除！');
   }
 
   private handleShuffle() {
-    this.showToast('💡 智能提示：请尝试腾挪浅色药水汇入空瓶');
+    if (this._isBusy) return;
+    const bestMove = findBestPourMove(this._bottles);
+    if (bestMove) {
+      const srcTube = this.gameBoard.getTube(bestMove.srcIdx);
+      const dstTube = this.gameBoard.getTube(bestMove.dstIdx);
+      if (this._selectedIndex !== null) {
+        const prev = this.gameBoard.getTube(this._selectedIndex);
+        if (prev) prev.setSelected(false);
+      }
+      this._selectedIndex = bestMove.srcIdx;
+      if (srcTube) srcTube.setSelected(true);
+      const movingColor = this._bottles[bestMove.srcIdx].layers[this._bottles[bestMove.srcIdx].layers.length - 1];
+      const colName = COLORS[movingColor]?.name || '药水';
+      this.showToast(`💡 智能推演：将第 ${bestMove.srcIdx + 1} 瓶【${colName}】倒入第 ${bestMove.dstIdx + 1} 瓶！`);
+    } else {
+      this.showToast('⚠️ 当前桌面暂无直接可倒步骤，建议点击【+空瓶】或【撤回】！');
+    }
   }
 
   private handleAddBottle() {
-    this.showToast('🎬 看广告免费+1备用空瓶');
+    this._history.push(this.cloneState());
+
+    // 1. 步数危急救急：若步数限制 <= 3 步，优先增加 5 步
+    if (this._remainingMoves !== null && this._remainingMoves <= 3) {
+      this._remainingMoves += 5;
+      this.updateMovesDisplay();
+      this.showToast('🎬 激励辅助奖励：已为您增加 +5 步！');
+      return;
+    }
+
+    // 2. 优先解除流沙超时寒冰封口或流沙炸弹倒计时
+    const frozenOrBomb = this._bottles.find(
+      (b) => !b.removed && !b.corked && ((b.frozenTurns && b.frozenTurns > 0) || (b.countdownMoves && b.countdownMoves > 0))
+    );
+    if (frozenOrBomb) {
+      const wasFrozen = !!(frozenOrBomb.frozenTurns && frozenOrBomb.frozenTurns > 0);
+      frozenOrBomb.frozenTurns = 0;
+      frozenOrBomb.countdownMoves = null;
+      for (let i = 0; i < this._bottles.length; i++) {
+        const t = this.gameBoard.getTube(i);
+        if (t) t.init(i, this._bottles[i]);
+      }
+      this.showToast(wasFrozen ? '❄️ 辅助特权：已为您立即震碎瓶口寒冰封印！' : '⏳ 辅助特权：已为您立即拆除星砂流沙炸弹！');
+      return;
+    }
+
+    // 3. 优先解锁场上的激励视频备用空瓶 (ad_cam / ad_cam_blue)
+    const camBottle = this._bottles.find((b) => !b.removed && (b.special === 'ad_cam' || b.special === 'ad_cam_blue'));
+    if (camBottle) {
+      camBottle.special = 'none';
+      for (let i = 0; i < this._bottles.length; i++) {
+        const t = this.gameBoard.getTube(i);
+        if (t) t.init(i, this._bottles[i]);
+      }
+      this.showToast('🎬 辅助特权：已为您免费解锁 +1 备用琉璃空瓶！');
+      return;
+    }
+
+    // 4. 优先解除一处特殊障碍（冰座、石座、星缎、盲盒等）
+    const obstacleBottle = this._bottles.find(
+      (b) => !b.removed && !b.corked && (b.special !== 'none' || (b.mysteryCount && b.mysteryCount > 0))
+    );
+    if (obstacleBottle) {
+      if (obstacleBottle.special !== 'none') {
+        obstacleBottle.special = 'none';
+        obstacleBottle.requiredColor = null;
+        obstacleBottle.poursToBreak = 0;
+        obstacleBottle.poursRemaining = 0;
+        for (let i = 0; i < this._bottles.length; i++) {
+          const t = this.gameBoard.getTube(i);
+          if (t) t.init(i, this._bottles[i]);
+        }
+        this.showToast('✨ 辅助特权：已为您直接化解一处特殊障碍！');
+      } else {
+        obstacleBottle.mysteryCount = 0;
+        for (let i = 0; i < this._bottles.length; i++) {
+          const t = this.gameBoard.getTube(i);
+          if (t) t.init(i, this._bottles[i]);
+        }
+        this.showToast('✨ 辅助特权：已为您驱散一整瓶星雾盲盒！');
+      }
+      return;
+    }
+
+    // 5. 原地复用已消散古瓶或已入库留下的空槽位 (b.removed === true)，防止撑破 2x6 棋盘
+    const removedSlot = this._bottles.find((b) => b.removed);
+    if (removedSlot) {
+      removedSlot.removed = false;
+      removedSlot.corked = false;
+      removedSlot.maxCap = 4;
+      removedSlot.layers = [];
+      removedSlot.special = 'none';
+      removedSlot.requiredColor = null;
+      removedSlot.mysteryCount = 0;
+      removedSlot.countdownMoves = null;
+      removedSlot.frozenTurns = 0;
+      for (let i = 0; i < this._bottles.length; i++) {
+        const t = this.gameBoard.getTube(i);
+        if (t) t.init(i, this._bottles[i]);
+      }
+      this.showToast('➕ 辅助特权：已在空缺槽位为您补充 +1 标准琉璃空瓶！');
+      return;
+    }
+
+    // 6. 若场上瓶数未达上限，额外陈列 1 瓶
+    if (this._bottles.length < 14) {
+      this._bottles.push({
+        id: this._bottles.length,
+        maxCap: 4,
+        layers: [],
+        special: 'none',
+      });
+      if (this.gameBoard) {
+        this.gameBoard.init(this._bottles, (idx) => this.handleTubeClick(idx));
+      }
+      this.showToast('➕ 辅助特权：已为您额外陈列 +1 备用琉璃空瓶！');
+    } else {
+      this.showToast('💡 当前桌面器皿已满，建议点击【提示】或【撤回】！');
+    }
   }
 
   private handleUndo() {
